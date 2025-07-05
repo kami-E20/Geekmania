@@ -1,19 +1,40 @@
+
 import os
 import telebot
-from dotenv import load_dotenv
+from flask import Flask, request
 
-load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+RENDER_URL = os.getenv("RENDER_URL")
+
 bot = telebot.TeleBot(BOT_TOKEN)
+app = Flask(__name__)
 
-@bot.message_handler(commands=['start', 'help'])
-def send_welcome(message):
-    bot.reply_to(message, "Bienvenue sur Geekmania Bot !")
+@app.route('/')
+def index():
+    return "🎬 Gedaj est actif sur Render (Webhook activé)"
 
-@bot.message_handler(func=lambda message: True)
-def echo_all(message):
-    bot.reply_to(message, message.text)
+@app.route(f'/{BOT_TOKEN}', methods=['POST'])
+def webhook():
+    json_str = request.get_data().decode('utf-8')
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return '', 200
 
-if __name__ == "__main__":
-    print("Bot lancé avec succès !")
-    bot.infinity_polling()
+@bot.message_handler(commands=['start'])
+def start_command(message):
+    bot.reply_to(message, "🎬 Bienvenue sur Geekmania avec Gedaj")
+
+@bot.message_handler(commands=['help'])
+def help_command(message):
+    bot.reply_to(message, "Voici quelques commandes utiles :\n/start - Accueil\n/help - Aide\n/url - Lien Render du bot")
+
+@bot.message_handler(commands=['url'])
+def url_command(message):
+    bot.reply_to(message, f"🌐 Voici l'URL de Gedaj : {RENDER_URL}")
+
+if __name__ == '__main__':
+    print("🚀 Activation du webhook...")
+    bot.remove_webhook()
+    webhook_set = bot.set_webhook(url=f"{RENDER_URL}/{BOT_TOKEN}")
+    print("✅ Webhook configuré :", webhook_set)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
