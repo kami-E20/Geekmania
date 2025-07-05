@@ -1,58 +1,54 @@
 import os
 import telebot
 from flask import Flask, request
+from datetime import datetime
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 RENDER_URL = os.getenv("RENDER_URL")
-ADMIN_ID = os.getenv("ADMIN_ID")
-SECOND_ADMIN_ID = os.getenv("SECOND_ADMIN_ID")
+ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return "Gedaj est actif 🚀"
+    return "Gedaj est en ligne 🚀"
 
-@app.route(f"/{BOT_TOKEN}", methods=["POST"])
-def receive_update():
-    json_string = request.get_data().decode("utf-8")
-    update = telebot.types.Update.de_json(json_string)
+@app.route(f'/{BOT_TOKEN}', methods=["POST"])
+def webhook():
+    json_str = request.get_data().decode("UTF-8")
+    update = telebot.types.Update.de_json(json_str)
     bot.process_new_updates([update])
-    return "OK", 200
+    return "!", 200
 
-@bot.message_handler(commands=['start'])
-def handle_start(message):
+@bot.message_handler(commands=["start"])
+def start(message):
     bot.reply_to(message, "🎬 Bienvenue sur Geekmania avec Gedaj")
 
-@bot.message_handler(commands=['help'])
-def handle_help(message):
-    bot.reply_to(message, (
-        "🤖 *Commandes disponibles :*
+@bot.message_handler(commands=["help"])
+def help_command(message):
+    bot.reply_to(message, "🤖 *Commandes disponibles : *\n"
+                          "/start - Démarrer le bot\n"
+                          "/help - Afficher les commandes\n"
+                          "/url - Obtenir l'URL de Gedaj\n"
+                          "/time - Heure actuelle\n",
+                 parse_mode="Markdown")
 
-"
-        "/start – Lancer le bot
-"
-        "/help – Obtenir la liste des commandes
-"
-        "/url – Obtenir l'URL du bot Render
-"
-        "/test – Vérifier si tout fonctionne bien
-"
-    ), parse_mode='Markdown')
+@bot.message_handler(commands=["url"])
+def url_command(message):
+    bot.reply_to(message, f"L'URL publique de Gedaj est : {RENDER_URL}")
 
-@bot.message_handler(commands=['url'])
-def handle_url(message):
-    bot.reply_to(message, f"🌐 URL Render : {RENDER_URL}")
-
-@bot.message_handler(commands=['test'])
-def handle_test(message):
-    if str(message.from_user.id) in [ADMIN_ID, SECOND_ADMIN_ID]:
-        bot.reply_to(message, "✅ Le bot fonctionne correctement et vous êtes un admin !")
-    else:
-        bot.reply_to(message, "❌ Vous n'avez pas accès à cette commande.")
+@bot.message_handler(commands=["time"])
+def time_command(message):
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    bot.reply_to(message, f"Heure actuelle 🕒 : {now}")
 
 if __name__ == "__main__":
+    import threading
+
+    def run():
+        app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+
+    threading.Thread(target=run).start()
     bot.remove_webhook()
     bot.set_webhook(url=f"{RENDER_URL}/{BOT_TOKEN}")
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
