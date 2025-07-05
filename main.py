@@ -47,8 +47,8 @@ if __name__ == "__main__":
     import threading
 
     def run():
+        bot.remove_webhook()
+        bot.set_webhook(url=f"{RENDER_URL}/{BOT_TOKEN}")
         app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
 
     threading.Thread(target=run).start()
-    bot.remove_webhook()
-    bot.set_webhook(url=f"{RENDER_URL}/{BOT_TOKEN}")
