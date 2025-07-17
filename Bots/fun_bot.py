@@ -1,35 +1,37 @@
 from telegram.ext import Updater, CommandHandler
+from database.db import init_db, update_points, get_user
 import random
 import os
 
+init_db()
 BOT_TOKEN = os.getenv("FUN_BOT_TOKEN")
 
-# Quiz System
 QUESTIONS = [
     {"q": "Qui a réalisé 'Inception' ?", "a": "Christopher Nolan"},
-    {"q": "Quel studio anime 'One Piece' ?", "a": "Toei Animation"}
+    {"q": "Quel studio anime 'Attack on Titan' ?", "a": "Wit Studio"}
 ]
 
 def quiz(update, context):
     question = random.choice(QUESTIONS)
-    context.user_data['answer'] = question['a']
+    context.user_data['current_question'] = question
     update.message.reply_text(f"❓ {question['q']}\nRéponds avec /reponse [ta_réponse]")
 
-def correction(update, context):
-    update.message.reply_text(f"📖 Correction : {context.user_data.get('answer', 'Aucune question en cours')}")
-
-def avis(update, context):
-    update.message.reply_text("❤️ Donne ton avis ici : https://forms.gle/...")
+def reponse(update, context):
+    user_answer = ' '.join(context.args).strip().lower()
+    correct_answer = context.user_data.get('current_question', {}).get('a', '').lower()
+    
+    if user_answer == correct_answer:
+        update_points(update.effective_user.id, 5)
+        update.message.reply_text("✅ Correct ! +5 points")
+    else:
+        update.message.reply_text(f"❌ Faux ! La réponse était : {correct_answer}")
 
 COMMANDS = [
     ('quiz', quiz),
-    ('correction', correction),
-    ('avis', avis),
-    ('suggestion', lambda u,c: u.message.reply_text("💡 Propose un contenu via /suggestion [titre]")),
-    ('translate', lambda u,c: u.message.reply_text("🌐 Traduction : En développement")),
-    ('lang', lambda u,c: u.message.reply_text("🗣️ Langues disponibles : FR/EN")),
-    ('vision', lambda u,c: u.message.reply_text("👓 Préférences : Films/Séries/Manga")),
-    ('defi', lambda u,c: u.message.reply_text("🎯 Défi : Nommez 3 films de Miyazaki !"))
+    ('reponse', reponse),
+    ('correction', lambda u,c: u.message.reply_text("📖 Correction : ...")),
+    ('avis', lambda u,c: u.message.reply_text("❤️ Donne ton avis ici : ...")),
+    ('defi', lambda u,c: u.message.reply_text("🎯 Défi : Nommez 3 films de Nolan !"))
 ]
 
 updater = Updater(BOT_TOKEN)
