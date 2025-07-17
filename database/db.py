@@ -2,7 +2,7 @@ import sqlite3
 from datetime import datetime
 
 def init_db():
-    """Initialise la base de données avec les tables nécessaires"""
+    """Initialise la base de données avec les tables"""
     conn = sqlite3.connect('database/users.db')
     cursor = conn.cursor()
     
@@ -20,6 +20,7 @@ def init_db():
     # Table quiz
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS quizzes (
+            quiz_id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             question TEXT,
             is_correct BOOLEAN,
@@ -27,17 +28,6 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(user_id)
         )
     ''')
-    
-    # Table actualités (pour le bot d'actualités)
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS news_log (
-            news_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            source TEXT,
-            published_at TIMESTAMP
-        )
-    ''')
-    
     conn.commit()
     conn.close()
 
@@ -48,14 +38,38 @@ def get_user(user_id):
     cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
     user = cursor.fetchone()
     conn.close()
-    return user
+    return user or None
 
-def add_points(user_id, points):
-    """Ajoute des points à un utilisateur"""
+def add_user(user_id, username):
+    """Ajoute un nouvel utilisateur"""
     conn = sqlite3.connect('database/users.db')
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE users SET points = points + ? WHERE user_id = ?",
-        (points, user_id)
+        "INSERT OR IGNORE INTO users (user_id, username, last_active) VALUES (?, ?, ?)",
+        (user_id, username, datetime.now())
+    )
     conn.commit()
     conn.close()
+
+def update_points(user_id, points):
+    """Met à jour les points d'un utilisateur"""
+    conn = sqlite3.connect('database/users.db')
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE users SET points = points + ?, last_active = ? WHERE user_id = ?",
+        (points, datetime.now(), user_id)
+    )
+    conn.commit()
+    conn.close()
+
+def get_leaderboard(limit=10):
+    """Récupère le classement"""
+    conn = sqlite3.connect('database/users.db')
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT username, points FROM users ORDER BY points DESC LIMIT ?",
+        (limit,)
+    )
+    leaderboard = cursor.fetchall()
+    conn.close()
+    return leaderboard
