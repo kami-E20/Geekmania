@@ -1,49 +1,39 @@
 from telegram.ext import Updater, CommandHandler
-import sqlite3
+from database.db import init_db, add_user, update_points, get_leaderboard
 import os
-from datetime import datetime
 
-# Configuration
+# Initialisation
+init_db()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHANNEL_ID = os.getenv("CHANNEL_ID")
-GROUP_ID = os.getenv("GROUP_ID")
-
-# Connexion DB
-conn = sqlite3.connect('database/geekmania.db')
-cursor = conn.cursor()
 
 def start(update, context):
     user = update.effective_user
+    add_user(user.id, user.username)
     update.message.reply_text(
-        f"🎬 Bienvenue {user.first_name} dans Geekmania !\n"
+        f"🎬 Bienvenue {user.first_name} !\n"
         "Utilisez /classement pour voir les tops membres."
     )
 
 def classement(update, context):
-    cursor.execute("SELECT username, points FROM users ORDER BY points DESC LIMIT 10")
-    top = cursor.fetchall()
+    leaderboard = get_leaderboard()
     response = "🏆 CLASSEMENT :\n" + "\n".join(
-        [f"{i+1}. {user[0]} - {user[1]} pts" for i, user in enumerate(top)]
+        [f"{i+1}. {user[0]} - {user[1]} pts" for i, user in enumerate(leaderboard)]
     )
     update.message.reply_text(response)
 
 def inviter(update, context):
-    user_id = update.effective_user.id
-    cursor.execute("UPDATE users SET points = points + 10 WHERE user_id = ?", (user_id,))
-    conn.commit()
+    update_points(update.effective_user.id, 10)
     update.message.reply_text("🎉 +10 points pour ton invitation !")
 
-# Commandes principales
 COMMANDS = [
     ('start', start),
     ('classement', classement),
     ('inviter', inviter),
-    ('fanpass', lambda u,c: u.message.reply_text("🎭 Rôle : En cours de développement")),
+    ('fanpass', lambda u,c: u.message.reply_text("🎭 Rôle : Fan certifié")),
     ('abodumois', lambda u,c: u.message.reply_text("📅 Abonné du mois : ...")),
-    ('recompenses', lambda u,c: u.message.reply_text("🎁 Récompenses : ..."))
+    ('recompenses', lambda u,c: u.message.reply_text("🎁 Récompenses : Bientôt disponible !"))
 ]
 
-# Initialisation
 updater = Updater(BOT_TOKEN)
 for cmd, handler in COMMANDS:
     updater.dispatcher.add_handler(CommandHandler(cmd, handler))
