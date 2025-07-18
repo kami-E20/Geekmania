@@ -1,44 +1,37 @@
-from telegram.ext import Updater, CommandHandler
-from database.db import init_db, get_leaderboard
 import os
 import logging
+from telegram.ext import Updater, CommandHandler
 
-# Config logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# Configuration du logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
-# Init DB
-init_db()
-
 def start(update, context):
-    """Gère la commande /start"""
-    user = update.effective_user
-    update.message.reply_text(f"🎬 Bienvenue {user.first_name} sur GeekmaniaOfficiel !")
-
-def classement(update, context):
-    """Gère la commande /classement"""
-    leaderboard = get_leaderboard()
-    response = "🏆 Classement :\n" + "\n".join(
-        f"{i+1}. {user[0]} - {user[1]} pts" for i, user in enumerate(leaderboard)
-    )
-    update.message.reply_text(response)
+    update.message.reply_text("🚀 Bot opérationnel avec Python 3.9 et PTB 13.7 !")
 
 def error_handler(update, context):
-    """Gère les erreurs"""
-    logger.error(f"Update {update} caused error {context.error}")
+    logger.error(f"Erreur : {context.error}")
+
+def main():
+    try:
+        # Initialisation
+        updater = Updater(os.getenv("BOT_TOKEN"))
+        
+        # Commandes
+        dp = updater.dispatcher
+        dp.add_handler(CommandHandler("start", start))
+        dp.add_error_handler(error_handler)
+
+        # Lancement
+        updater.start_polling()
+        logger.info("Bot démarré avec succès")
+        updater.idle()
+        
+    except Exception as e:
+        logger.critical(f"Échec du démarrage : {e}")
 
 if __name__ == "__main__":
-    updater = Updater(os.getenv("BOT_TOKEN"))
-    dp = updater.dispatcher
-
-    # Commandes
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("classement", classement))
-
-    # Gestion erreurs
-    dp.add_error_handler(error_handler)
-
-    # Lancement
-    updater.start_polling()
-    logger.info("Bot principal démarré")
-    updater.idle()
+    main()
